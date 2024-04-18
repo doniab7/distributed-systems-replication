@@ -3,6 +3,7 @@ package org.example;
 import com.rabbitmq.client.*;
 
 import java.io.*;
+import java.sql.SQLOutput;
 import java.util.concurrent.TimeoutException;
 
 public class Replica {
@@ -81,16 +82,6 @@ public class Replica {
             });
 
 
-
-            // Keep the main thread running to continue listening for messages
-            while (true) {
-                try {
-                    Thread.sleep(1000); // Sleep for a short duration to avoid busy waiting
-                } catch (InterruptedException e) {
-                    System.err.println(" [!] Thread interrupted: " + e.getMessage());
-                    Thread.currentThread().interrupt(); // Restore interrupted status
-                }
-            }
         } catch (IOException | TimeoutException e) {
             System.err.println(" [!] Error: " + e.getMessage());
             e.printStackTrace();
@@ -110,21 +101,32 @@ public class Replica {
 
     public static String readLastLine(String fileName) {
         String lastLine = null;
-        try (BufferedReader reader = new BufferedReader(new FileReader(fileName))) {
-            String line;
-            // Read each line of the file until reaching the end
-            while ((line = reader.readLine()) != null) {
-                // Update lastLine with the current line read
-                lastLine = line;
+        try (RandomAccessFile file = new RandomAccessFile(new File(fileName), "r")) {
+            long fileLength = file.length();
+            if (fileLength == 0) {
+                return null; // File is empty
             }
+            long pos = fileLength - 2; // Start at the end of the file
+            String sb = "";
+            boolean foundNewLine = false;
+            // Read characters backward until a newline character is found or we reach the beginning of the file
+            while (pos >= 0) {
+                file.seek(pos);
+                char c = (char) file.read();
+                if (c == '\n') {
+                    // If newline character is found, stop reading
+                    foundNewLine = true;
+                    break;
+                }
+                sb = c +sb;
+                pos--;
+            }
+            lastLine = sb;
         } catch (IOException e) {
             e.printStackTrace();
             System.err.println("Error reading file: " + e.getMessage());
         }
         return lastLine;
     }
-
-
-
 
 }

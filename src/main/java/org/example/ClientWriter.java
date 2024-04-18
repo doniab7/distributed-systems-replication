@@ -2,8 +2,6 @@ package org.example;
 
 import com.rabbitmq.client.*;
 
-import java.io.IOException;
-import java.util.concurrent.TimeoutException;
 
 public class ClientWriter {
     private static final String EXCHANGE_NAME = "file_exchange";
