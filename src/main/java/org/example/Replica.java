@@ -8,9 +8,7 @@ import java.util.concurrent.TimeoutException;
 
 public class Replica {
     private static final String EXCHANGE_NAME = "file_exchange";
-    private static final String QUEUE_PREFIX = "file_addition_queue_replica";
     private static final String READ_LAST_EXCHANGE = "read_last_exchange";
-    private static final String READ_LAST_QUEUE_PREFIX = "read_last_queue_replica";
     private static final String RESPONSE_QUEUE = "response_queue";
     private static final int NUM_REPLICAS = 3;
     private static final String READ_ALL_EXCHANGE = "read_all_exchange";
@@ -29,11 +27,6 @@ public class Replica {
             System.exit(1);
         }
 
-        String queueName = QUEUE_PREFIX + replicaNumber;
-        String readLastQueueName = READ_LAST_QUEUE_PREFIX + replicaNumber;
-        String readAllQueueName = "read_all_queue_replica" + replicaNumber;
-
-
         ConnectionFactory factory = new ConnectionFactory();
         factory.setHost("localhost");
 
@@ -45,7 +38,7 @@ public class Replica {
 
 
             //1: RECEIVE MESSAGES FROM CLIENTWRITER
-            channel.queueDeclare(queueName, false, false, false, null);
+            String queueName =  channel.queueDeclare().getQueue();
             channel.exchangeDeclare(EXCHANGE_NAME, BuiltinExchangeType.FANOUT);
             channel.queueBind(queueName, EXCHANGE_NAME, "");
 
@@ -63,7 +56,7 @@ public class Replica {
 
             //2: RECEIVE QUERIES FROM CLIENTREADER
             channel.exchangeDeclare(READ_LAST_EXCHANGE, BuiltinExchangeType.FANOUT);
-            channel.queueDeclare(readLastQueueName, false, false, false, null);
+            String readLastQueueName = channel.queueDeclare().getQueue();
             channel.queueBind(readLastQueueName, READ_LAST_EXCHANGE, "");
 
             channel.queueDeclare(RESPONSE_QUEUE, false, false, false, null);
@@ -87,7 +80,7 @@ public class Replica {
 
             // 3: RECEIVE QUERIES FROM CLIENTREADER FOR READ ALL
             channel.exchangeDeclare(READ_ALL_EXCHANGE, BuiltinExchangeType.FANOUT);
-            channel.queueDeclare(readAllQueueName, false, false, false, null);
+            String readAllQueueName = channel.queueDeclare().getQueue();
             channel.queueBind(readAllQueueName, READ_ALL_EXCHANGE, "");
 
             // Start consuming 'Read All' requests
