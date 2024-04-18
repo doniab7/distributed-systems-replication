@@ -13,7 +13,8 @@ public class Replica {
     private static final String READ_LAST_QUEUE_PREFIX = "read_last_queue_replica";
     private static final String RESPONSE_QUEUE = "response_queue";
     private static final int NUM_REPLICAS = 3;
-
+    private static final String READ_ALL_EXCHANGE = "read_all_exchange";
+    private static final String READ_ALL_RESPONSE_QUEUE = "read_all_response_queue";
 
     public static void main(String[] args) {
         if (args.length != 1) {
@@ -30,6 +31,7 @@ public class Replica {
 
         String queueName = QUEUE_PREFIX + replicaNumber;
         String readLastQueueName = READ_LAST_QUEUE_PREFIX + replicaNumber;
+        String readAllQueueName = "read_all_queue_replica" + replicaNumber;
 
 
         ConnectionFactory factory = new ConnectionFactory();
@@ -59,7 +61,6 @@ public class Replica {
             });
 
 
-
             //2: RECEIVE QUERIES FROM CLIENTREADER
             channel.exchangeDeclare(READ_LAST_EXCHANGE, BuiltinExchangeType.FANOUT);
             channel.queueDeclare(readLastQueueName, false, false, false, null);
@@ -80,6 +81,34 @@ public class Replica {
             // Consume 'Read Last' requests
             channel.basicConsume(readLastQueueName, true, readLastCallback, consumerTag -> {
             });
+
+
+
+
+            // 3: RECEIVE QUERIES FROM CLIENTREADER FOR READ ALL
+            channel.exchangeDeclare(READ_ALL_EXCHANGE, BuiltinExchangeType.FANOUT);
+            channel.queueDeclare(readAllQueueName, false, false, false, null);
+            channel.queueBind(readAllQueueName, READ_ALL_EXCHANGE, "");
+
+            // Start consuming 'Read All' requests
+            DeliverCallback readAllCallback = (consumerTag, delivery) -> {
+                System.out.println(" [x] Received 'Read All' request from ClientReader");
+
+                // Read the entire file and send each line as a separate message to the response queue
+                try (BufferedReader reader = new BufferedReader(new FileReader("file_replica_" + replicaNumber + ".txt"))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        channel.basicPublish("", READ_ALL_RESPONSE_QUEUE, null, line.getBytes("UTF-8"));
+                        System.out.println(" [x] Sent line to response queue: " + line);
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    System.err.println("Error reading file: " + e.getMessage());
+                }
+            };
+
+            channel.basicConsume(readAllQueueName, true, readAllCallback, consumerTag -> {});
+
 
 
         } catch (IOException | TimeoutException e) {

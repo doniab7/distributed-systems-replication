@@ -20,7 +20,7 @@ public class ClientReader {
             channel.queueDeclare(RESPONSE_QUEUE, false, false, false, null);
 
             // Bind response queue to exchange
-            channel.queueBind(RESPONSE_QUEUE, READ_LAST_EXCHANGE, "");
+            // channel.queueBind(RESPONSE_QUEUE, READ_LAST_EXCHANGE, "");
 
             // Send 'Read Last' query to read last exchange
             String message = "Read Last";
